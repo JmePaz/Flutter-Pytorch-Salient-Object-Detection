@@ -92,15 +92,15 @@ public class MainActivity extends FlutterActivity implements  FlutterPlugin, Met
                 Log.d("Debug", "Calling segmentation method");
                 String path = call.argument("path").toString().replace("file://", "");
                 Log.d("Debug", "Path of an Image: "+ path);
-                //final Bitmap imgBitMap = imgPathToBitmap(path);
-                Bitmap imgBitMap = null;
+                final Bitmap imgBitMap = imgPathToBitmap(path);
+               /* Bitmap imgBitMap = null;
                 try {
                    imgBitMap = BitmapFactory.decodeStream(getAssets().open("horse.jpg"));
                 }
                 catch (IOException e){
                     result.error("Error", e.getMessage(), e);
                     return;
-                }
+                }*/
                 Log.d("Debug", "Running the Model");
                // final Bitmap segmentedBitmap = imgBitMap;
                 final Bitmap segmentedBitmap = segmentObjectOnImage(imgBitMap);
