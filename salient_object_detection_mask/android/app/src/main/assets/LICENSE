@@ -4,9 +4,11 @@ License Under Apache License 2.0
 Paper: U2-Net: Going Deeper with Nested U-Structure for Salient Object Detection
 
 *Developer Changes
-    -------------------------------------
-    Convert the Pre-trained Model to a lite model which is workable around android devices.
-    -----------------------------------
+--------------------------------------------
+   -Convert the Pre-trained Model to a lite model which is workable around android devices.
+   - Use interpolate function instead upsample
+   - Return value of Forward Model is just sigmoid func of side d0
+--------------------------------------------
 *
 
                                  Apache License
