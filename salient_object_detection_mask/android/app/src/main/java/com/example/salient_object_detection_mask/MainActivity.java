@@ -92,27 +92,30 @@ public class MainActivity extends FlutterActivity implements  FlutterPlugin, Met
                 Log.d("Debug", "Calling segmentation method");
                 String path = call.argument("path").toString().replace("file://", "");
                 Log.d("Debug", "Path of an Image: "+ path);
-                //final Bitmap imgBitMap = imgPathToBitmap(path);
-                Bitmap imgBitMap = null;
+                final Bitmap imgBitMap = imgPathToBitmap(path);
+               /* Bitmap imgBitMap = null;
                 try {
                    imgBitMap = BitmapFactory.decodeStream(getAssets().open("horse.jpg"));
                 }
                 catch (IOException e){
                     result.error("Error", e.getMessage(), e);
                     return;
-                }
+                }*/
                 Log.d("Debug", "Running the Model");
                // final Bitmap segmentedBitmap = imgBitMap;
-                final Bitmap segmentedBitmap = segmentObjectOnImage(imgBitMap);
+                Bitmap segmentedBitmap = segmentObjectOnImage(imgBitMap);
                 if(segmentedBitmap == null){
                     Log.d("Debug", "Image not found in the path!");
                     result.error("Image NOT Found!", "not able to find the image path", null);
                     return;
                 }
                 Log.d("Debug", "Successful! Converting into buffer/byte[]");
-                final byte[] res = bitmapToBuffer(segmentedBitmap);
+                byte[] res = bitmapToBuffer(segmentedBitmap);
                 result.success(res);
-                //result.success(res);
+                //garabage
+                segmentedBitmap = null;
+                res = null;
+
 
             }
             else{
@@ -142,10 +145,13 @@ public class MainActivity extends FlutterActivity implements  FlutterPlugin, Met
     }
 
     private Bitmap segmentObjectOnImage(Bitmap imgBit){
-        Bitmap mBitmap = Bitmap.createScaledBitmap(imgBit, imgBit.getWidth()/3, imgBit.getHeight()/3, false);
-        if(mBitmap == null){
+        if(imgBit == null){
             return  null;
         }
+        // rescaling
+        Bitmap mBitmap = rescaleBitMap(imgBit, 320, true);
+
+        //rescaling
         final Tensor imageInputTensor = TensorImageUtils.bitmapToFloat32Tensor(mBitmap,
                 TensorImageUtils.TORCHVISION_NORM_MEAN_RGB, TensorImageUtils.TORCHVISION_NORM_STD_RGB);
 
@@ -178,6 +184,7 @@ public class MainActivity extends FlutterActivity implements  FlutterPlugin, Met
         int width = mBitmap.getWidth();
         int height = mBitmap.getHeight();
         int[]pxValues = new int[width*height];
+        final int MASK_MARGIN = 10;
         for(int j =0; j<height; j++) {
             for (int k = 0; k < width; k++) {
                 int ind = j * width + k; //row based
@@ -185,7 +192,7 @@ public class MainActivity extends FlutterActivity implements  FlutterPlugin, Met
                 int pxV_int = (int) (((pxVF - minF) / (maxF - minF)) * 255);
 
                 // apply direct masking
-                if(pxV_int <= 40){
+                if(pxV_int <= MASK_MARGIN){
                     pxValues[ind] = 0x00000000;
                 }
                 else{
@@ -216,10 +223,24 @@ public class MainActivity extends FlutterActivity implements  FlutterPlugin, Met
 
         Bitmap segmentedBitMap = Bitmap.createBitmap(pxValues, width, height, mBitmap.getConfig());
         final Bitmap croppedBitMap = Bitmap.createBitmap(segmentedBitMap, posMinX,  posMinY,posMaxX-posMinX,posMaxY-posMinY);
-        final Bitmap resizedBitMap = Bitmap.createScaledBitmap(croppedBitMap,imgBit.getWidth(), imgBit.getHeight(), true);
+        final Bitmap resizedBitMap = rescaleBitMap(croppedBitMap, 400, true);
         return  resizedBitMap;
     }
 
+    private  Bitmap rescaleBitMap(Bitmap imgBit, int minDimension, boolean isFlag){
+        int newWidth = 0;
+        int newHeight = 0;
+        if(imgBit.getHeight()>=imgBit.getWidth()){
+            newWidth = minDimension;
+            newHeight = (minDimension * imgBit.getHeight())/imgBit.getWidth();
+        }
+        else{
+            newHeight = minDimension;
+            newWidth = (minDimension*imgBit.getWidth())/imgBit.getHeight();
+        }
+
+        return  Bitmap.createScaledBitmap(imgBit, newWidth, newHeight, isFlag);
+    }
 
     private  byte[] bitmapToBuffer(Bitmap imgBit){
         ByteArrayOutputStream byteOutputS = new ByteArrayOutputStream();
