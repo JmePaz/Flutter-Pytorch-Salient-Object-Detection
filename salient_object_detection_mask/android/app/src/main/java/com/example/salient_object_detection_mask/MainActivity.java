@@ -1,6 +1,7 @@
 package com.example.salient_object_detection_mask;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
@@ -93,14 +94,6 @@ public class MainActivity extends FlutterActivity implements  FlutterPlugin, Met
                 String path = call.argument("path").toString().replace("file://", "");
                 Log.d("Debug", "Path of an Image: "+ path);
                 final Bitmap imgBitMap = imgPathToBitmap(path);
-               /* Bitmap imgBitMap = null;
-                try {
-                   imgBitMap = BitmapFactory.decodeStream(getAssets().open("horse.jpg"));
-                }
-                catch (IOException e){
-                    result.error("Error", e.getMessage(), e);
-                    return;
-                }*/
                 Log.d("Debug", "Running the Model");
                // final Bitmap segmentedBitmap = imgBitMap;
                 Bitmap segmentedBitmap = segmentObjectOnImage(imgBitMap);
@@ -124,9 +117,13 @@ public class MainActivity extends FlutterActivity implements  FlutterPlugin, Met
     }
     private void loadModel( String path){
         try {
-            module =  LiteModuleLoader.load(assetFilePath(this.binding.getApplicationContext(), "u2netp.ptl"));
-            
-            //module = LiteModuleLoader.load(path);
+            //read/write(if not found) license path and model path
+            String licensePath = getAbsolutePath(this.binding.getApplicationContext(), "LICENSE", true);
+            String modelPath = getAbsolutePath(this.binding.getApplicationContext(), "u2netp.ptl", true);
+
+            //load path
+            module =  LiteModuleLoader.load(modelPath);
+
             System.out.println("Model is loaded...");
         }
         catch (Exception e){
@@ -248,30 +245,38 @@ public class MainActivity extends FlutterActivity implements  FlutterPlugin, Met
         return  byteOutputS.toByteArray();
     }
 
-    /**
-     * Copies specified asset to the file in /files app directory and returns this file absolute path.
-     *
-     * @return absolute file path
-     */
-    public static String assetFilePath(Context context, String assetName) throws IOException {
-        File file = new File(context.getFilesDir(), assetName);
-        if (file.exists() && file.length() > 0) {
-            return file.getAbsolutePath();
+    private String getAbsolutePath(Context context, String assetName, boolean isAutoCreate){
+        File assetFile = new File(context.getFilesDir(), assetName);
+        if(assetFile.exists()){
+            return  assetFile.getAbsolutePath();
+        }
+        else if (!isAutoCreate){
+            throw new Resources.NotFoundException();
+        }
+        try(InputStream inputStream =  context.getAssets().open(assetName, 2)){
+            //write a file if resources not found
+            writeAssetFile(assetFile, inputStream);
+        }
+        catch (IOException e){
+            throw new RuntimeException(e.getMessage());
+        }
+        catch (Exception e){
+            throw e;
         }
 
-        try (InputStream is = context.getAssets().open(assetName)) {
-            try (OutputStream os = new FileOutputStream(file)) {
-                byte[] buffer = new byte[4 * 1024];
-                int read;
-                while ((read = is.read(buffer)) != -1) {
-                    os.write(buffer, 0, read);
-                }
-                os.flush();
-            }
-            return file.getAbsolutePath();
-        }
-
+        return  assetFile.getAbsolutePath();
     }
 
+    private void writeAssetFile(File assetFile, InputStream inputStream) throws  IOException{
+        try(OutputStream outputStream = new FileOutputStream(assetFile)){
+            byte[] buf = new byte[4096];
+            int readData;
+            while((readData = inputStream.read(buf))!=-1){
+                    outputStream.write(buf,0 ,readData);
+            }
+            outputStream.close();
+            outputStream.flush();
+        }
+    }
 
 }
